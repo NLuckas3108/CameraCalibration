@@ -10,16 +10,14 @@ from geometry_msgs.msg import TransformStamped
 import csv
 from datetime import datetime
 import random
-import cv2          # Neu für die Kamera
-import numpy as np  # Neu für das Speichern der Pose
+import cv2        
+import numpy as np  
 
-# for single robot
 ROBOT_ID   = "dsr01"
 ROBOT_MODEL= "m1013"
 
 global movement_finished
 
-# Import und Initialisierung des DSR-spezifischen Initialisierungsmoduls
 import DR_init
 DR_init.__dsr__id   = ROBOT_ID
 DR_init.__dsr__model = ROBOT_MODEL
@@ -31,10 +29,8 @@ def main(args=None):
     
     rclpy.init(args=args)
 
-    # Hauptnode
     node = rclpy.create_node('dsr_example_demo_py', namespace=ROBOT_ID)
 
-    # Import Roboter-Funktionen
     DR_init.__dsr__node = node
     try:
         from DSR_ROBOT2 import print_ext_result, movej, movel, movec, move_periodic, move_spiral, set_velx, set_accx, get_current_posj, get_current_posx, get_current_pose, get_desired_posx, DR_BASE, DR_TOOL, DR_AXIS_X, DR_MV_MOD_ABS
@@ -46,19 +42,16 @@ def main(args=None):
     executor.add_node(node)
     executor_thread = threading.Thread(target=executor.spin, daemon=True)
     executor_thread.start()
-    
-    # get_current_posx und DR_BASE mit in den Thread übergeben
+
     movement_thread = threading.Thread(
         target=run_movement,
         args=(node, movel, get_current_posx, DR_BASE)
     )
     movement_thread.start()
-    
-    # Warten auf Beendigung der Bewegung
+
     while rclpy.ok() and not movement_finished:
         time.sleep(0.1)
 
-    # Shutdown-Logik
     node.get_logger().info("Fahre Executor herunter...")
     executor.shutdown()
     executor_thread.join()
@@ -66,10 +59,10 @@ def main(args=None):
     rclpy.shutdown()
     
 def run_movement(node, movel, get_current_posx, DR_BASE):
-    velx = [150, 90]
-    accx = [150, 90]
+    velx = [50, 30]
+    accx = [50, 30]
         
-    x_values = [700, 800, 900]
+    x_values = [750, 850, 950]
     y_values = [150, 250, 350]
     z_values = [300, 400, 500]
     rot_values_alpha = [-20, -10, 0, 10, 20]
@@ -78,56 +71,43 @@ def run_movement(node, movel, get_current_posx, DR_BASE):
 
     orientation = [0, 90, -120]
 
-    point_array = []
-
-    for z in z_values:
-        for y in y_values:
-            for x in x_values:
-                punkt = [x, y, z] + orientation
-                point_array.append(punkt)
-            
-    # --- NEU: Ordner für Kalibrierungsdaten erstellen ---
-    ausgabe_ordner = "calibration_data"
-    if not os.path.exists(ausgabe_ordner):
-        os.makedirs(ausgabe_ordner)
+    output_folder = "calibration_data"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     cap = cv2.VideoCapture(4)
-    time.sleep(10)
+    for _ in range(50):
+        cap.read()
 
-    movel(point_array[0], velx, accx)
+    movel([750, 150, 300, 0, 90, -120], velx, accx)
     
-    # Auf 50 Iterationen erhöht
     for i in range (0, 50):
-        x = random.choice(x_values)
-        y = random.choice(y_values)
-        z = random.choice(z_values)
-        zufalls_pos = [x, y, z, random.choice(rot_values_alpha), random.choice(rot_values_beta), random.choice(rot_values_gamma)]
+        zufalls_pos = [random.choice(x_values), random.choice(y_values), random.choice(z_values), random.choice(rot_values_alpha), random.choice(rot_values_beta), random.choice(rot_values_gamma)]
         
-        # 1. Roboter fährt zur Zufallspose
         movel(zufalls_pos, velx, accx)
         
-        # 2. WICHTIG: Halbe Sekunde warten, damit der Greifer nicht mehr wackelt
         time.sleep(2)
         
-        # 3. Exakte Pose abfragen (im Base-Koordinatensystem)
         aktuelle_pose = get_current_posx(DR_BASE)[0]
         
-        # 4. Bild aufnehmen
+        for _ in range(5):
+            cap.read()
+        
         ret, frame = cap.read()
         
         if ret:
-            bild_pfad = os.path.join(ausgabe_ordner, f"cam_{i:03d}.png")
-            pose_pfad = os.path.join(ausgabe_ordner, f"pose_{i:03d}.npy")
+            bild_pfad = os.path.join(output_folder, f"cam_{i:03d}.png")
+            pose_pfad = os.path.join(output_folder, f"pose_{i:03d}.npy")
             
             cv2.imwrite(bild_pfad, frame)
             
             np.save(pose_pfad, np.array(aktuelle_pose))
             
-            print(f"Position {i+1}/50: Bild und Pose erfolgreich gespeichert.")
+            print(f"Position {i+1}/50: image and pose were saved successfully")
         else:
-            print(f"FEHLER an Position {i+1}: Kamera konnte kein Bild abgreifen!")
+            print(f"ERROR at position {i+1}: camera couldnt get image")
 
-    movel(point_array[0], velx, accx)
+    movel([750, 150, 300, 0, 90, -120], velx, accx)
     
     cap.release()
     
