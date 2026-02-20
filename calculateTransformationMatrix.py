@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 from scipy.spatial.transform import Rotation as R_scipy
+from getRealsenseIntrinsics import get_intrinsics
 
 PATTERN_SIZE = (6, 7) #
 SQUARE_SIZE = 0.030
@@ -42,12 +43,20 @@ for i in range(50):
 
 print(f"\nVerwende {len(valid_indices)} von 50 Bildern für die Kalibrierung.\n")
 
-print("Berechne intrinsische Parameter...")
-ret, camera_matrix, dist_coeffs, _, _ = cv2.calibrateCamera(
-    all_obj_points, all_corners, image_size, None, None
-)
+#print("Berechne intrinsische Parameter...")
+#ret, camera_matrix, dist_coeffs, _, _ = cv2.calibrateCamera(
+#    all_obj_points, all_corners, image_size, None, None
+#)
 
-print(f"Intrinsische Kalibrierung fertig. Reprojection Error: {ret:.4f}\n")
+#camera_matrix, dist_coeffs = get_intrinsics(width=640, height=480)
+
+camera_matrix = np.array([
+    [608.28442383, 0.,           322.55404663],
+    [0.,           608.72912598, 242.2066803 ],
+    [0.,           0.,           1.          ]
+], dtype=np.float64)
+
+dist_coeffs = np.zeros((5, 1), dtype=np.float64)
 
 R_gripper2base_list = []
 t_gripper2base_list = []
@@ -67,7 +76,7 @@ for idx, objpoints, corners in zip(valid_indices, all_obj_points, all_corners):
         
         t_base2tcp = (pose_1d[:3] / 1000.0).reshape(3, 1)
         
-        r_matrix = R_scipy.from_euler('zxy', pose_1d[3:], degrees=True).as_matrix()
+        r_matrix = R_scipy.from_euler('ZYZ', pose_1d[3:], degrees=True).as_matrix()
         R_base2tcp = r_matrix
         
         R_tcp2base = R_base2tcp.T
@@ -86,10 +95,13 @@ R_cam2base, t_cam2base = cv2.calibrateHandEye(
 T_cam2base = np.eye(4)
 T_cam2base[:3, :3] = R_cam2base
 T_cam2base[:3, 3] = t_cam2base.flatten()
+T_base2cam = np.linalg.inv(T_cam2base)
 
 print("\n--- ERGEBNIS ---")
 print("Transformationsmatrix T_Cam_to_Base:")
-print(np.round(T_cam2base, 4))
+print(T_cam2base)
+print("Transformationsmatrix T_Base_to_cam:")
+print(T_base2cam)
 
 np.save("T_cam2base.npy", T_cam2base)
-print("\nMatrix als 'T_cam2base.npy' gespeichert.")
+np.save("T_base2cam.npy", T_base2cam)
