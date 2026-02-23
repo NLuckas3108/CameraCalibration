@@ -1,12 +1,13 @@
 import subprocess
 import os
-import glob
 import sys
+import glob
 
 MOVEMENT_SCRIPT = "calibrationMovement.py"
 ANALYSIS_SCRIPT = "calculateTransformationMatrix.py"
 
 def get_latest_calibration_folder():
+    """Sucht den zuletzt erstellten calibration_data_ Ordner."""
     folders = glob.glob("calibration_data_*")
     if not folders:
         return None
@@ -15,33 +16,33 @@ def get_latest_calibration_folder():
 def main():
     print("=== Starte Kalibrierungsprozess ===")
     
-    print(f"\n[Schritt 1] Starte Datenerfassung ({MOVEMENT_SCRIPT})...")
+    print(f"\n[Schritt 1] Führe {MOVEMENT_SCRIPT} aus...")
     if not os.path.exists(MOVEMENT_SCRIPT):
-        print(f"Fehler: Datei '{MOVEMENT_SCRIPT}' nicht gefunden.")
+        print(f"Fehler: {MOVEMENT_SCRIPT} wurde im aktuellen Verzeichnis nicht gefunden.")
         sys.exit(1)
         
     result_movement = subprocess.run([sys.executable, MOVEMENT_SCRIPT])
     
     if result_movement.returncode != 0:
-        print("\nFehler bei der Datenerfassung (Roboterbewegung). Breche ab.")
+        print(f"\nFehler: Die Datenerfassung ({MOVEMENT_SCRIPT}) ist abgestürzt. Breche Kalibrierung ab.")
         sys.exit(1)
 
     latest_folder = get_latest_calibration_folder()
     if not latest_folder:
-        print("\nFehler: Konnte nach der Bewegung keinen neu erstellten 'calibration_data'-Ordner finden.")
+        print("\nFehler: Es konnte kein neu erstellter 'calibration_data_...'-Ordner gefunden werden.")
         sys.exit(1)
         
-    print(f"\nDaten erfolgreich erfasst in Ordner: {latest_folder}")
+    print(f"\nDaten erfolgreich erfasst in: {latest_folder}")
 
-    print(f"\n[Schritt 2] Starte Auswertung ({ANALYSIS_SCRIPT})...")
+    print(f"\n[Schritt 2] Führe {ANALYSIS_SCRIPT} für den Ordner {latest_folder} aus...")
     if not os.path.exists(ANALYSIS_SCRIPT):
-        print(f"Fehler: Datei '{ANALYSIS_SCRIPT}' nicht gefunden.")
+        print(f"Fehler: {ANALYSIS_SCRIPT} wurde im aktuellen Verzeichnis nicht gefunden.")
         sys.exit(1)
         
     result_analysis = subprocess.run([sys.executable, ANALYSIS_SCRIPT, latest_folder])
     
     if result_analysis.returncode != 0:
-        print("\nFehler bei der Auswertung der Bilder.")
+        print(f"\nFehler: Die Auswertung ({ANALYSIS_SCRIPT}) wurde mit einem Fehler beendet.")
         sys.exit(1)
         
     print("\n=== Kalibrierungsprozess vollständig abgeschlossen ===")
