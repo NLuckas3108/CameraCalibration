@@ -85,6 +85,9 @@ def run_movement(node, movel, get_current_posx, DR_BASE, movement_finished_event
         
         cam_folder = os.path.join(base_output_folder, f"camera_{cam_idx}")
         os.makedirs(cam_folder, exist_ok=True)
+
+        with open(os.path.join(cam_folder, "serial.txt"), "w") as f:
+            f.write(serial_number)
         
         pipeline = rs.pipeline()
         config = rs.config()
