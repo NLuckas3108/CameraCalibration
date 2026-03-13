@@ -48,6 +48,15 @@ def call_move_stop(node):
         return True
     return False
 
+def extract_pose(raw_pose_data):
+    result = []
+    for item in raw_pose_data:
+        if isinstance(item, (list, tuple)):
+            result.append(float(item[0]))
+        else:
+            result.append(float(item))
+    return result[:6]
+
 
 def main(args=None):
     movement_finished_event = threading.Event()
@@ -90,12 +99,12 @@ def run_movement(node, movel, get_current_posx, DR_BASE, movement_finished_event
         velx = [50, 30]
         accx = [50, 30]
             
-        delta_x = [-100, 0, 100]
-        delta_y = [-100, 0, 100]
-        delta_z = [-100, 0, 100]
-        delta_alpha = [-20, -10, 0, 10, 20]
-        delta_beta = [-20, -10, 0, 10, 20]
-        delta_gamma = [-20, -10, 0, 10, 20]
+        delta_x = [-50, 0, 50]
+        delta_y = [-50, 0, 50]
+        delta_z = [-50, 0, 50]
+        delta_alpha = [-10, -5, 0, 5, 10]
+        delta_beta = [-10, -5, 0, 5, 10]
+        delta_gamma = [-10, -5, 0, 5, 10]
 
         unix_timestamp = int(time.time())
         base_output_folder = f"calibration_data_{unix_timestamp}"
@@ -156,7 +165,7 @@ def run_movement(node, movel, get_current_posx, DR_BASE, movement_finished_event
             set_robot_mode_srv(node, 1)
             time.sleep(1.0) 
             
-            base_pose = get_current_posx(DR_BASE)[0]
+            base_pose = extract_pose(get_current_posx(DR_BASE)[0])
             print(f"Grundpose gespeichert: {base_pose}")
             print("Starte 50 Posen...")
             
@@ -202,7 +211,8 @@ def run_movement(node, movel, get_current_posx, DR_BASE, movement_finished_event
                         time.sleep(1.0)
                         continue
 
-                    aktuelle_pose = get_current_posx(DR_BASE)[0]
+                    aktuelle_pose = extract_pose(get_current_posx(DR_BASE)[0])
+                    
                     distanz = np.linalg.norm(np.array(aktuelle_pose[:3]) - np.array(target_pos[:3]))
                     
                     if distanz < 5.0:

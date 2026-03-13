@@ -77,11 +77,22 @@ def analyze_camera_folder(cam_folder):
             pose_path = os.path.join(cam_folder, f"pose_{idx:03d}.npy")
             pose_1d = np.load(pose_path)
             
-            t_base2tcp = (pose_1d[:3] / 1000.0).reshape(3, 1)
-            R_base2tcp = R_scipy.from_euler('ZYZ', pose_1d[3:], degrees=True).as_matrix()
+            # 1. TCP-Pose im Base-System berechnen
+            t_tcp2base = (pose_1d[:3] / 1000.0).reshape(3, 1)
+            # WICHTIG: 'ZYZ' zwingend groß schreiben für intrinsische Rotation!
+            R_tcp2base = R_scipy.from_euler('ZYZ', pose_1d[3:], degrees=True).as_matrix()
             
-            R_base2tcp_list.append(R_base2tcp)
-            t_base2tcp_list.append(t_base2tcp)
+            T_tcp2base = np.eye(4)
+            T_tcp2base[:3, :3] = R_tcp2base
+            T_tcp2base[:3, 3] = t_tcp2base.flatten()
+            
+            # 2. Invertieren für Eye-to-Hand Kalibrierung
+            # OpenCV erwartet die Pose der Base aus Sicht des TCPs
+            T_base2tcp = np.linalg.inv(T_tcp2base)
+            
+            # Listen füttern (mit der invertierten Pose)
+            R_base2tcp_list.append(T_base2tcp[:3, :3])
+            t_base2tcp_list.append(T_base2tcp[:3, 3].reshape(3, 1))
 
     R_cam2base, t_cam2base = cv2.calibrateHandEye(
         R_base2tcp_list, t_base2tcp_list,
@@ -96,6 +107,7 @@ def analyze_camera_folder(cam_folder):
 
     print(f"--- ERGEBNIS FÜR {cam_folder} ---")
     print("T_Cam_to_Base:\n", T_cam2base)
+    print("T_Base_to_Cam:\n", T_base2cam)
 
     np.save(os.path.join(cam_folder, "T_cam2base.npy"), T_cam2base)
     np.save(os.path.join(cam_folder, "T_base2cam.npy"), T_base2cam)

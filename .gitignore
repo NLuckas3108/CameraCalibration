@@ -1,3 +1,6 @@
 calibration_data_*/
 *.npy
 __pycache__/
+*.zip
+first_calibration/
+second_calibration

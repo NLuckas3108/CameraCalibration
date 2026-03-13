@@ -3,8 +3,8 @@ import os
 import sys
 import glob
 
-MOVEMENT_SCRIPT = "calibrationMovement.py"
-ANALYSIS_SCRIPT = "calculateTransformationMatrix.py"
+MOVEMENT_SCRIPT = "calibrationMovementV2.py"
+ANALYSIS_SCRIPT = "calculateTransformationMatrixV2.py"
 
 def get_latest_calibration_folder():
     """Sucht den zuletzt erstellten calibration_data_ Ordner."""
